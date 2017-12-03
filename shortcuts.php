@@ -9,7 +9,7 @@
 /**
  * Send a mail
  * 
- * @param 	array   $data          Mail data
+ * @param   array   $data          Mail data
  *                  - recepient    array|string  Recipient (either an array [0]=>emails [1]=>names or just an email)
  *                  - subject      string        Subject
  *                  - body         string        Message body
@@ -17,10 +17,10 @@
  *                  - cc           array|string  CC (either an array [0]=>emails [1]=>names or just an email)
  *                  - bcc          array|string  BCC (either an array [0]=>emails [1]=>names or just an email)
  *                  - replyTo      array|string  Reply to (either an array [0]=>emails [1]=>names or just an email)
- * @param 	array   $config        Mailer config
- * @param 	bool    $exceptionOnError Throw a runtime exception on error
- * @return 	bool    True if mail was sent
- * @throw 	\RuntimeException
+ * @param   array   $config        Mailer config
+ * @param   bool    $exceptionOnError Throw a runtime exception on error
+ * @return   bool    True if mail was sent
+ * @throw   \RuntimeException
  * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 function MailIt(array $data, array $config=[], $exceptionOnError=true)
