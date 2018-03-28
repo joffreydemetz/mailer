@@ -80,9 +80,9 @@ class Mailer extends PHPMailer
   /**
    * Set the From and FromName properties
    * 
-   * @param string $address
-   * @param string $name
-   * @param boolean $auto Whether to also set the Sender address, defaults to true
+   * @param  string   $address
+   * @param  string   $name
+   * @param  boolean  $auto     Whether to also set the Sender address, defaults to true
    * @throws phpmailerException
    * @return boolean
    */

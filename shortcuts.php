@@ -6,11 +6,13 @@
  * file that was distributed with this source code.
  */
 
+ use JDZ\Mailer\MailerHelper;
+ 
 /**
  * Send a mail
  * 
  * @param   array   $data          Mail data
- *                  - recepient    array|string  Recipient (either an array [0]=>emails [1]=>names or just an email)
+ *                  - recepient    array|string  Recipient (either an array [0]=>email [1]=>name or just an email)
  *                  - subject      string        Subject
  *                  - body         string        Message body
  *                  - attachment   array|string  Attachment files (either an array [0]=>attachments [1]=>names or just an attachment)
@@ -38,7 +40,7 @@ function MailIt(array $data, array $config=[], $exceptionOnError=true)
   $result = false;
   
   try {
-    $result = \JDZ\Mailer\MailerHelper::sendMail($config, $data);
+    $result = MailerHelper::sendMail($config, $data);
   }
   catch(MailerException $e){
     if ( $exceptionOnError === true ){
