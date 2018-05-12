@@ -8,7 +8,7 @@ namespace JDZ\Mailer;
 /**
  * Mailer exception
  *
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 class MailerException extends \RuntimeException
 {

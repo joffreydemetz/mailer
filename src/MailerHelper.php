@@ -10,7 +10,7 @@ namespace JDZ\Mailer;
  * 
  * Provides static methods to send mails easily
  * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 abstract class MailerHelper
 {

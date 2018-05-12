@@ -13,7 +13,7 @@ use \phpmailerException;
  * 
  * Provides a common interface to send emails extending PHPMailer
  * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 class Mailer extends PHPMailer
 {

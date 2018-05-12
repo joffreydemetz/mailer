@@ -23,7 +23,7 @@
  * @param   bool    $exceptionOnError Throw a runtime exception on error
  * @return   bool    True if mail was sent
  * @throw   \RuntimeException
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 function MailIt(array $data, array $config=[], $exceptionOnError=true)
 {
