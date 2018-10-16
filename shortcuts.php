@@ -6,7 +6,7 @@
  * file that was distributed with this source code.
  */
 
- use JDZ\Mailer\MailerHelper;
+use JDZ\Mailer\MailerHelper;
  
 /**
  * Send a mail
@@ -19,11 +19,10 @@
  *                  - cc           array|string  CC (either an array [0]=>emails [1]=>names or just an email)
  *                  - bcc          array|string  BCC (either an array [0]=>emails [1]=>names or just an email)
  *                  - replyTo      array|string  Reply to (either an array [0]=>emails [1]=>names or just an email)
- * @param   array   $config        Mailer config
- * @param   bool    $exceptionOnError Throw a runtime exception on error
- * @return   bool    True if mail was sent
- * @throw   \RuntimeException
- * @author Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @param  array   $config        Mailer config
+ * @param  bool    $exceptionOnError Throw a runtime exception on error
+ * @return bool    True if mail was sent
+ * @throw  RuntimeException
  */
 function MailIt(array $data, array $config=[], $exceptionOnError=true)
 {
@@ -44,7 +43,7 @@ function MailIt(array $data, array $config=[], $exceptionOnError=true)
   }
   catch(MailerException $e){
     if ( $exceptionOnError === true ){
-      throw new \RuntimeException($e->getMessage());
+      throw new RuntimeException($e->getMessage());
     }
   }
   
