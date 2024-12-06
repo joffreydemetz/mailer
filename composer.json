@@ -1,0 +1,29 @@
+{
+    "name": "jdz/mailer",
+    "type": "library",
+    "description": "JDZ mailer",
+    "keywords": ["JDZ","utilities","mailer"],
+    "homepage": "https://jdz.joffreydemetz.com/mailer/",
+    "version": "1.0.0",
+    "license": "MIT",
+    
+    "authors": [
+        {
+            "name": "Joffrey Demetz",
+            "email": "joffrey.demetz@gmail.com",
+            "homepage": "https://joffreydemetz.com",
+            "role": "Lead"
+        }
+    ],
+
+    "suggest": {
+        "phpmailer/phpmailer": "Needed to send email with phpMailer and use SMTP, DKIM or Sendmail features",
+        "jdz/html2text": "Needed to convert HTML email body to TEXT altBody. Otherwise PHPmailer does it basically."
+    },
+    
+    "autoload": {
+        "psr-4": {
+            "JDZ\\Mailer\\": "src"
+        }
+    }
+}
