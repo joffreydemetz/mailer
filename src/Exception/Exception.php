@@ -7,4 +7,4 @@
 
 namespace JDZ\Mailer\Exception;
 
-class SmtpException extends \RuntimeException {}
+class Exception extends \Exception {}

@@ -17,9 +17,18 @@
             "role": "Lead"
         }
     ],
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpmailer/phpmailer": "^6.9",
+        "ph-7/html-to-text": "^2.0",
+        "soundasleep/html2text": "^1.1"
+    },
     "suggest": {
-        "phpmailer/phpmailer": "Needed to send email with phpMailer and use SMTP, DKIM or Sendmail features",
-        "jdz/html2text": "Needed to convert HTML email body to TEXT altBody. Otherwise PHPmailer does it basically."
+        "phpmailer/phpmailer": "Needed to send email using SMTP, DKIM or Sendmail features.",
+        "ph-7/html-to-text": "To convert the html mail body to plain text with Pierre-Henry de Soria's Html2Text converter.",
+        "soundasleep/html2text": "To convert the html mail body to plain text with Sound Asleep Html2Text converter."
     },
     "autoload": {
         "psr-4": {

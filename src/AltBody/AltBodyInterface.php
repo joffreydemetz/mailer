@@ -5,6 +5,9 @@
  * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
-namespace JDZ\Mailer\Exception;
+namespace JDZ\Mailer\AltBody;
 
-class SmtpException extends \RuntimeException {}
+interface AltBodyInterface
+{
+  public function convert(string $html): string;
+}

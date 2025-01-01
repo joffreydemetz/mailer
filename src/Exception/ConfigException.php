@@ -1,17 +1,10 @@
-<?php 
+<?php
+
 /**
- * Joffrey Demetz <joffrey.demetz@gmail.com>
- * <https://joffreydemetz.com/jdzmailer/>
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
+
 namespace JDZ\Mailer\Exception;
 
-use JDZ\Mailer\Exception;
-
-/**
- * Config exception
- *
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
-class ConfigException extends Exception
-{
-}
+class ConfigException extends \LogicException {}
