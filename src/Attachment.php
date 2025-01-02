@@ -17,14 +17,8 @@ class Attachment
 
   public function __construct(string $path, string $name = '', string $encoding = '', string $type = '', string $disposition = '')
   {
-    $this->path = $path;
-    $this->name = $name;
-    $this->encoding = $encoding;
-    $this->type = $type;
-    $this->disposition = $disposition;
-
     if ('' === $encoding) {
-      $type = 'base64';
+      $encoding = 'base64';
     }
 
     if ('' === $type) {
@@ -34,5 +28,11 @@ class Attachment
     if ('' === $disposition) {
       $disposition = 'attachment';
     }
+
+    $this->path = $path;
+    $this->name = $name;
+    $this->encoding = $encoding;
+    $this->type = $type;
+    $this->disposition = $disposition;
   }
 }
