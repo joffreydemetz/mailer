@@ -112,7 +112,6 @@ try {
         'attachments' => [],
     ]);*/
 
-    $mail->check();
     $mail->send();
 
     echo 'Email sent. ';

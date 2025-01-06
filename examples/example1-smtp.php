@@ -51,7 +51,6 @@ try {
 
     $mail->addRecipient($testEmail, 'Joe');
 
-    $mail->check();
     $mail->send();
 
     echo 'Email sent. ';

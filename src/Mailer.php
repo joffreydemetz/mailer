@@ -315,6 +315,8 @@ class Mailer
 
   public function send()
   {
+    $this->check();
+
     if ('mail' === $this->type) {
       $mail = new NativeMailSender();
     } else {
