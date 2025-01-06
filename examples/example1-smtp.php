@@ -13,13 +13,16 @@ require_once realpath(__DIR__ . '/../vendor/autoload.php');
 
 use JDZ\Mailer\Mailer as jMailer;
 
+$testEmail = 'joffrey.demetz@gmail.com';
+$testDomain = 'localhost';
+
 try {
     $mail = new jMailer();
 
     $mail->setProperties([
         'localMode' => true,
         'useFallback' => false,
-        'domain' => '',
+        'domain' => $testDomain,
         'timestamp' => (new \DateTime())->format(\DATE_RFC3339),
         'language' => 'fr',
         'charset' => 'utf-8',
@@ -46,7 +49,7 @@ try {
 
     $mail->setFrom('johndoe@test.com', 'John Doe');
 
-    $mail->addRecipient('joe@test.com', 'Joe');
+    $mail->addRecipient($testEmail, 'Joe');
 
     $mail->check();
     $mail->send();

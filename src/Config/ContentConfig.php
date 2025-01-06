@@ -19,7 +19,7 @@ class ContentConfig extends Config
   public bool $isHtml = false;
   public int $maxMailContentWidth = 600;
   public string $style = '';
-  public string $template = '';
+  public string $template = '{{BODY}}';
   public string $content = '';
 
   public string $Body = '';
