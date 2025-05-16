@@ -18,17 +18,19 @@
         }
     ],
     "require": {
-        "php": ">=8.1"
+        "php": ">=8.2"
     },
     "require-dev": {
         "phpmailer/phpmailer": "^6.9",
         "ph-7/html-to-text": "^2.0",
-        "soundasleep/html2text": "^1.1"
+        "soundasleep/html2text": "^1.1",
+        "mailchimp/transactional": "^1.0"
     },
     "suggest": {
         "phpmailer/phpmailer": "Needed to send email using SMTP, DKIM or Sendmail features.",
         "ph-7/html-to-text": "To convert the html mail body to plain text with Pierre-Henry de Soria's Html2Text converter.",
-        "soundasleep/html2text": "To convert the html mail body to plain text with Sound Asleep Html2Text converter."
+        "soundasleep/html2text": "To convert the html mail body to plain text with Sound Asleep Html2Text converter.",
+        "mailchimp/transactional": "To send email using Mailchimp Transactional API."
     },
     "autoload": {
         "psr-4": {

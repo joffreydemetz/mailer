@@ -25,12 +25,21 @@ abstract class Config
 
   public function set(string $key, mixed $value)
   {
+    if (property_exists($this, $key) === false) {
+      throw new ConfigException('Property ' . $key . ' does not exist in ' . get_class($this));
+    }
+
     $this->{$key} = $value;
     return $this;
+  }
+
+  public function get(string $key): mixed
+  {
+    return $this->{$key} ?? null;
   }
 
   /**
    * @throws  ConfigException
    */
-  abstract public function check();
+  abstract public function check(): void; // check if the config is valid
 }

@@ -31,7 +31,7 @@ class SmtpConfig extends Config
     return parent::set($key, $value);
   }
 
-  public function check()
+  public function check(): void
   {
     if (false === $this->use) {
       return;

@@ -9,4 +9,4 @@ namespace JDZ\Mailer\Exception;
 
 use JDZ\Mailer\Exception\Exception;
 
-class SmtpException extends Exception {}
+class MailchimpException extends Exception {}

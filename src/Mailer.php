@@ -10,8 +10,12 @@ namespace JDZ\Mailer;
 use JDZ\Mailer\Config\ContentConfig;
 use JDZ\Mailer\Config\SmtpConfig;
 use JDZ\Mailer\Config\DkimConfig;
+use JDZ\Mailer\Config\MailchimpConfig;
 use JDZ\Mailer\Sender\NativeMailSender;
 use JDZ\Mailer\Sender\PhpmailerSender;
+use JDZ\Mailer\Sender\MailchimpSender;
+use JDZ\Mailer\Address;
+use JDZ\Mailer\Attachment;
 use JDZ\Mailer\AltBody\BasicAltBody;
 use JDZ\Mailer\Exception\Exception;
 use JDZ\Mailer\Exception\ConfigException;
@@ -29,9 +33,11 @@ class Mailer
 
   public bool $localMode = false;
   public bool $useFallback = false;
+  public bool $important = false;
 
   public SMTPConfig $smtp;
   public DkimConfig $dkim;
+  public MailchimpConfig $mailchimp;
   public ContentConfig $content;
 
   public ?Address $from = null;
@@ -50,6 +56,7 @@ class Mailer
   {
     $this->smtp = new SMTPConfig();
     $this->dkim = new DkimConfig();
+    $this->mailchimp = new MailchimpConfig();
     $this->content = new ContentConfig();
 
     $this->content->altBodyFormatter = new BasicAltBody();
@@ -76,6 +83,10 @@ class Mailer
 
       case 'dkim':
         $this->setDKIM($value);
+        break;
+
+      case 'mailchimp':
+        $this->setMailchimp($value);
         break;
 
       case 'from':
@@ -123,6 +134,9 @@ class Mailer
         break;
 
       default:
+        if (property_exists($this, $key) === false) {
+          throw new ConfigException('Property ' . $key . ' does not exist in ' . get_class($this));
+        }
         $this->{$key} = $value;
         break;
     }
@@ -139,7 +153,15 @@ class Mailer
 
   public function setDKIM(array $data)
   {
+    $this->type = 'smtp';
     $this->dkim->setProperties($data);
+    return $this;
+  }
+
+  public function setMailchimp(array $data)
+  {
+    $this->type = 'mailchimp';
+    $this->mailchimp->setProperties($data);
     return $this;
   }
 
@@ -252,50 +274,88 @@ class Mailer
     return $this;
   }
 
-  public function check(): bool
+  public function setAsImportant()
   {
-    if ('' === $this->domain) {
-      throw new ConfigException('Missing "domain" Sender domain (domain.tld)');
-    }
+    $this->important = true;
+    return $this;
+  }
 
-    if (empty($this->from)) {
-      throw new ConfigException('Missing "from" Email email@domain.tld');
+  /**
+   * Check the configuration
+   * @throws  ConfigException
+   * @throws  Exception
+   */
+  public function check(): void
+  {
+    if ('mailchimp' !== $this->type) {
+      if (empty($this->from)) {
+        throw new ConfigException('Missing "from" Email email@domain.tld');
+      }
+
+      if ('' === $this->domain) {
+        throw new ConfigException('Missing "domain" Sender domain (domain.tld)');
+      }
+
+      if ('' === $this->smtp->host) {
+        $this->smtp->host = $this->domain;
+      }
+
+      if ('' === $this->dkim->domain) {
+        $this->dkim->domain = $this->domain;
+      }
+
+      if ('' === $this->dkim->identity) {
+        $this->dkim->identity = $this->from->name;
+      }
+
+      if (empty($this->replyTos)) {
+        $this->addReplyTo($this->from->email, $this->from->name);
+      }
     }
 
     if ('' === $this->subject) {
       throw new ConfigException('No Subject for this email');
     }
 
-    if (empty($this->replyTos)) {
-      $this->addReplyTo($this->from->email, $this->from->name);
-    }
-
-    if ('' === $this->smtp->host) {
-      $this->smtp->host = $this->domain;
-    }
-
-    if ('' === $this->dkim->domain) {
-      $this->dkim->domain = $this->domain;
-    }
-
-    if ('' === $this->dkim->identity) {
-      $this->dkim->identity = $this->from->name;
-    }
-
     try {
 
       $this->smtp->check();
       $this->dkim->check();
+      $this->mailchimp->check();
 
-      if (true === $this->smtp->valid || true === $this->dkim->valid) {
-        if (false === $this->canUsePhpMailer()) {
+      if ('mailchimp' === $this->type) {
+        if (false === $this->mailchimp->valid || false === $this->canUseMailchimp()) {
+          $this->mailchimp->valid = false;
+          $this->mailchimp->use = false;
+
           if (false === $this->useFallback) {
-            throw new Exception('PhpMailer is required to use SMTP and DKIM features');
+            throw new ConfigException('Mailchimp Transactional API is required to use Mailchimp features');
           }
 
-          $this->smtp->valid = false;
-          $this->dkim->valid = false;
+          $this->type = 'smtp';
+          $this->check();
+          return;
         }
+      }
+
+      if ('smtp' === $this->type) {
+        if (false === $this->smtp->valid || false === $this->canUsePhpMailer()) {
+          $this->smtp->valid = false;
+          $this->smtp->use = false;
+
+          if (false === $this->useFallback) {
+            throw new ConfigException('PhpMailer is required to use SMTP features');
+          }
+
+          $this->type = 'mail';
+          $this->check();
+          return;
+        }
+      }
+
+      if ('mail' === $this->type && false === $this->canUseNativeMailer()) {
+        $this->useFallback = false;
+        throw new ConfigException('Native mail() function is required to use Mail features');
       }
     } catch (\Throwable $e) {
       if (false === $this->useFallback) {
@@ -306,30 +366,28 @@ class Mailer
     if (false === $this->isMailerAvailable()) {
       throw new ConfigException('No mailer available to send the message !');
     }
-
-    $this->type = true === $this->smtp->valid ? 'smtp' : 'mail';
-    $this->content->check();
-
-    return true;
   }
 
   public function send()
   {
     $this->check();
-
-    if ('mail' === $this->type) {
-      $mail = new NativeMailSender();
+    if ('mailchimp' === $this->type) {
+      $sender = new MailchimpSender();
+    } elseif ('smtp' === $this->type) {
+      $sender = new PhpmailerSender();
     } else {
-      $mail = new PhpmailerSender();
+      $sender = new NativeMailSender();
     }
 
-    $mail->setMailer($this);
-    $mail->send();
+    $this->content->check();
+
+    $sender->setMailer($this);
+    $sender->send();
   }
 
   protected function isMailerAvailable()
   {
-    return true === $this->canUsePhpMailer() || true === $this->canUseNativeMailer();
+    return true === $this->canUsePhpMailer() || true === $this->canUseNativeMailer() || true === $this->canUseMailchimp();
   }
 
   protected function checkAddress(string $email, string $name = ''): ?Address
@@ -357,6 +415,11 @@ class Mailer
   protected function canUsePhpMailer(): bool
   {
     return \class_exists('\\PHPMailer\\PHPMailer\\PHPMailer');
+  }
+
+  protected function canUseMailchimp(): bool
+  {
+    return \class_exists('\\MailchimpTransactional\\ApiClient');
   }
 
   protected function canUseNativeMailer(): bool

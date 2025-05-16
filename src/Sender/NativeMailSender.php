@@ -8,6 +8,7 @@
 namespace JDZ\Mailer\Sender;
 
 use JDZ\Mailer\Mailer;
+use JDZ\Mailer\Exception\Exception;
 
 /**
  * Native Mailer container
@@ -42,10 +43,10 @@ class NativeMailSender
 
     try {
       if (false === mail($this->formatTo(), $this->subject, $this->formatBody(), $this->formatHeaders())) {
-        throw new \Exception('Error sending mail');
+        throw new Exception('Error sending mail');
       }
     } catch (\Throwable $e) {
-      throw new \Exception($e->getMessage(), $e->getCode(), $e);
+      throw new Exception($e->getMessage(), $e->getCode(), $e);
     }
   }
 
