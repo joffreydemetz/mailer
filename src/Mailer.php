@@ -46,6 +46,7 @@ class Mailer
   public array $ccs = [];
   public array $bccs = [];
   public array $attachments = [];
+  public array $tags = [];
   public string $subject = '';
 
   public array $DebugInfos = [];
@@ -131,6 +132,10 @@ class Mailer
 
       case 'attachments':
         $this->addAttachments($value);
+        break;
+
+      case 'tags':
+        $this->addTags($value);
         break;
 
       default:
@@ -270,6 +275,22 @@ class Mailer
   {
     if ($attachment = $this->checkAttachment($path, $name, $encoding, $type, $disposition)) {
       $this->attachments[] = $attachment;
+    }
+    return $this;
+  }
+
+  public function addTags(array $tags)
+  {
+    foreach ($tags as $tag) {
+      $this->addTag($tag);
+    }
+    return $this;
+  }
+
+  public function addTag(string $tag)
+  {
+    if ('' !== $tag) {
+      $this->tags[] = $tag;
     }
     return $this;
   }
