@@ -75,9 +75,7 @@ class MailchimpSender
         ];
       }
 
-      if ($this->mailer->mailchimp->tags) {
-        $messageData['tags'] = $this->mailer->mailchimp->tags;
-      }
+      $messageData['tags'] = $this->mailer->tags;
       $messageData['track_opens'] = $this->mailer->mailchimp->track_opens;
       $messageData['track_clicks'] = $this->mailer->mailchimp->track_clicks;
       $messageData['auto_text'] = $this->mailer->mailchimp->auto_text;
