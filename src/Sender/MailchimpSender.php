@@ -68,10 +68,14 @@ class MailchimpSender
       }
 
       foreach ($this->mailer->attachments as $attachment) {
+        if (!($content = $this->fetchAttachedFile($attachment->path))) {
+          continue;
+        }
+
         $messageData['attachments'][] = [
           'type' => $attachment->type,
           'name' => $attachment->name,
-          'content' => base64_encode($attachment->content),
+          'content' => base64_encode($content),
         ];
       }
 
@@ -100,5 +104,13 @@ class MailchimpSender
     } catch (\Throwable $e) {
       throw new MailchimpException($e->getMessage(), $e->getCode(), $e);
     }
+  }
+
+  private function fetchAttachedFile(string $path): string|false
+  {
+    if (!file_exists($path)) {
+      return false;
+    }
+    return file_get_contents($path);
   }
 }
