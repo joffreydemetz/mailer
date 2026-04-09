@@ -1,8 +1,10 @@
 <?php
 
 /**
- * Example 1
- * 
+ * Example 1 - SMTP
+ *
+ * Copy ../.env.dist to ../.env and fill in your credentials.
+ *
  * @format      HTML
  * @smtp        true
  * @sender      PHPmailer
@@ -11,10 +13,10 @@
 
 require_once realpath(__DIR__ . '/../vendor/autoload.php');
 
+use Symfony\Component\Dotenv\Dotenv;
 use JDZ\Mailer\Mailer as jMailer;
 
-$testEmail = 'joffrey.demetz@gmail.com';
-$testDomain = 'localhost';
+(new Dotenv())->loadEnv(__DIR__ . '/../.env');
 
 try {
     $mail = new jMailer();
@@ -22,7 +24,7 @@ try {
     $mail->setProperties([
         'localMode' => true,
         'useFallback' => false,
-        'domain' => $testDomain,
+        'domain' => 'localhost',
         'timestamp' => (new \DateTime())->format(\DATE_RFC3339),
         'language' => 'fr',
         'charset' => 'utf-8',
@@ -39,18 +41,17 @@ try {
 
     $mail->setSMTP([
         'debug' => 0,
-        'port' => 587,
-        'secure' => 'tls',
-        'auth' => true,
-        'host' => '',
-        'user' => '',
-        'pass' => '',
+        'port' => (int)($_ENV['SMTP_PORT'] ?? 587),
+        'secure' => $_ENV['SMTP_SECURE'] ?? 'tls',
+        'auth' => filter_var($_ENV['SMTP_AUTH'] ?? true, FILTER_VALIDATE_BOOLEAN),
+        'host' => $_ENV['SMTP_HOST'] ?? '',
+        'user' => $_ENV['SMTP_USER'] ?? '',
+        'pass' => $_ENV['SMTP_PASS'] ?? '',
     ]);
 
-    $mail->setFrom('johndoe@test.com', 'John Doe');
-
-    $mail->addRecipient($testEmail, 'Joe');
-
+    $mail->setFrom($_ENV['MAIL_FROM_EMAIL'] ?? '', $_ENV['MAIL_FROM_NAME'] ?? '');
+    $mail->addRecipient($_ENV['MAIL_TO_EMAIL'] ?? '', $_ENV['MAIL_TO_NAME'] ?? '');
+    $mail->set('subject', 'Test Email');
     $mail->send();
 
     echo 'Email sent. ';
@@ -67,4 +68,3 @@ try {
     echo 'Mailer error. ';
     echo $e->getMessage();
 }
-exit();

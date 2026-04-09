@@ -1,7 +1,10 @@
 <?php
 require_once realpath(__DIR__ . '/../vendor/autoload.php');
 
+use Symfony\Component\Dotenv\Dotenv;
 use JDZ\Mailer\Mailer as jMailer;
+
+(new Dotenv())->loadEnv(__DIR__ . '/../.env');
 
 try {
     $mail = new jMailer();
