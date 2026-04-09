@@ -1,4 +1,4 @@
 composer.lock
 /vendor/
-/examples/test.php
-/examples/mailchimp.php
+/.phpunit.cache/
+.env
