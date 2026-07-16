@@ -72,7 +72,7 @@ class NativeMailSender
       foreach ($this->mailer->replyTos as $person) {
         $headers['Reply-To'][] = (string)$person;
       }
-      $headers['Reply-To'] = implode(', ', $headers['Cc']);
+      $headers['Reply-To'] = implode(', ', $headers['Reply-To']);
     }
 
     if ($this->mailer->ccs) {
@@ -171,7 +171,7 @@ class NativeMailSender
         $body[] = '--' . $this->boundary;
         $body[] = 'Content-Type: ' . $attachement->type . '; name="' . $attachement->name . '"';
         $body[] = 'Content-Transfer-Encoding: ' . $attachement->encoding . '';
-        $body[] = 'Content-Disposition: ' . $attachement->disposition . '; filename="' . $attachement->name . '';
+        $body[] = 'Content-Disposition: ' . $attachement->disposition . '; filename="' . $attachement->name . '"';
         $body[] = '';
         $body[] = $data;
         $body[] = '';
