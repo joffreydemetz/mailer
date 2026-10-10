@@ -29,10 +29,6 @@ class MailchimpSender
   public function send()
   {
     try {
-      $mailchimp = new ApiClient();
-      $mailchimp->setApiKey($this->mailer->mailchimp->get('apiKey'));
-      $mailchimp->setDefaultOutputFormat('json');
-
       $messageData = [];
       $messageData['html'] = $this->mailer->content->Body;
       $messageData['text'] = $this->mailer->content->AltBody;
@@ -91,19 +87,39 @@ class MailchimpSender
       // $headers['X-Mailer'] = 'JDZ Mailer';
       // $headers['X-Mailchimp-Tag'] = implode(',', array_map(fn($tag) => $tag->name, $this->mailer->tags));
       if ($this->mailer->replyTos) {
-        $headers['Reply-To'] = implode(',', array_map(fn($replyTo) => $replyTo->name . ' <' . $replyTo->email . '>', $this->mailer->replyTos));
+        // "Name <email>", or the bare address (a nameless one used to give " <email>")
+        $headers['Reply-To'] = implode(',', array_map('strval', $this->mailer->replyTos));
       }
 
       if ($headers) {
         $messageData['headers'] = $headers;
       }
 
-      $mailchimp->messages->send([
-        'message' => $messageData,
-      ]);
+      $result = $this->deliver((string)$this->mailer->mailchimp->get('apiKey'), $messageData);
+
+      // the API client returns the HTTP error it caught (bad key, 5xx...) instead of throwing it
+      if ($result instanceof \Throwable) {
+        throw $result;
+      }
     } catch (\Throwable $e) {
       throw new MailchimpException($e->getMessage(), $e->getCode(), $e);
     }
+  }
+
+  /**
+   * The one call to the Mailchimp Transactional API, so a test (or a subclass)
+   * can see what is sent. Returns what the client returns: the recipients'
+   * statuses, or the RequestException it caught.
+   */
+  protected function deliver(string $apiKey, array $message): mixed
+  {
+    $mailchimp = new ApiClient();
+    $mailchimp->setApiKey($apiKey);
+    $mailchimp->setDefaultOutputFormat('json');
+
+    return $mailchimp->messages->send([
+      'message' => $message,
+    ]);
   }
 
   private function fetchAttachedFile(string $path): string|false
