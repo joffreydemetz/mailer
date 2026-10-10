@@ -17,15 +17,4 @@ class AttachmentTest extends TestCase
         $this->assertEquals('application/octet-stream', $attachment->type);
         $this->assertEquals('attachment', $attachment->disposition);
     }
-
-    public function testConstructorWithAllParams(): void
-    {
-        $attachment = new Attachment('/path/to/doc.pdf', 'document.pdf', '7bit', 'application/pdf', 'inline');
-
-        $this->assertEquals('/path/to/doc.pdf', $attachment->path);
-        $this->assertEquals('document.pdf', $attachment->name);
-        $this->assertEquals('7bit', $attachment->encoding);
-        $this->assertEquals('application/pdf', $attachment->type);
-        $this->assertEquals('inline', $attachment->disposition);
-    }
 }

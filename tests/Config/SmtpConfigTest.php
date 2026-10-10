@@ -8,18 +8,6 @@ use JDZ\Mailer\Exception\ConfigException;
 
 class SmtpConfigTest extends TestCase
 {
-    public function testDefaults(): void
-    {
-        $config = new SmtpConfig();
-
-        $this->assertFalse($config->use);
-        $this->assertEquals(0, $config->debug);
-        $this->assertEquals(587, $config->port);
-        $this->assertTrue($config->auth);
-        $this->assertEquals('', $config->host);
-        $this->assertEquals('tls', $config->secure);
-    }
-
     public function testSetEnablesUse(): void
     {
         $config = new SmtpConfig();

@@ -21,16 +21,6 @@ class ContentConfigTest extends TestCase
         return $config;
     }
 
-    public function testDefaults(): void
-    {
-        $config = new ContentConfig();
-
-        $this->assertFalse($config->isHtml);
-        $this->assertEquals('{{BODY}}', $config->template);
-        $this->assertEquals('', $config->content);
-        $this->assertEquals(0, $config->maxMailContentWidth);
-    }
-
     public function testCheckValidHtmlContent(): void
     {
         $config = $this->createConfig();

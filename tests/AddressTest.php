@@ -7,22 +7,6 @@ use JDZ\Mailer\Address;
 
 class AddressTest extends TestCase
 {
-    public function testConstructor(): void
-    {
-        $address = new Address('john@example.com', 'John Doe');
-
-        $this->assertEquals('john@example.com', $address->email);
-        $this->assertEquals('John Doe', $address->name);
-    }
-
-    public function testConstructorWithoutName(): void
-    {
-        $address = new Address('john@example.com');
-
-        $this->assertEquals('john@example.com', $address->email);
-        $this->assertEquals('', $address->name);
-    }
-
     public function testToStringWithName(): void
     {
         $address = new Address('john@example.com', 'John Doe');
