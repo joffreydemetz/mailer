@@ -325,8 +325,9 @@ class Mailer
         $this->dkim->domain = $this->domain;
       }
 
+      // the signature's i= tag is an address, not a display name
       if ('' === $this->dkim->identity) {
-        $this->dkim->identity = $this->from->name;
+        $this->dkim->identity = $this->from->email;
       }
 
       if (empty($this->replyTos)) {
@@ -338,50 +339,53 @@ class Mailer
       throw new ConfigException('No Subject for this email');
     }
 
-    try {
-
-      $this->smtp->check();
-      $this->dkim->check();
-      $this->mailchimp->check();
-
-      if ('mailchimp' === $this->type) {
-        if (false === $this->mailchimp->valid || false === $this->canUseMailchimp()) {
-          $this->mailchimp->valid = false;
-          $this->mailchimp->use = false;
-
-          if (false === $this->useFallback) {
-            throw new ConfigException('Mailchimp Transactional API is required to use Mailchimp features');
-          }
-
-          $this->type = 'smtp';
-          $this->check();
-          return;
+    // with a fallback, a config that fails its check rules its transport out (the
+    // error used to be swallowed, leaving the invalid transport in use); without
+    // one, it stops the mail
+    foreach ([$this->smtp, $this->dkim, $this->mailchimp] as $config) {
+      try {
+        $config->check();
+      } catch (ConfigException $e) {
+        if (false === $this->useFallback) {
+          throw $e;
         }
+
+        $config->valid = false;
       }
+    }
 
-      if ('smtp' === $this->type) {
-        if (false === $this->smtp->valid || false === $this->canUsePhpMailer()) {
-          $this->smtp->valid = false;
-          $this->smtp->use = false;
+    if ('mailchimp' === $this->type) {
+      if (false === $this->mailchimp->valid || false === $this->canUseMailchimp()) {
+        $this->mailchimp->valid = false;
+        $this->mailchimp->use = false;
 
-          if (false === $this->useFallback) {
-            throw new ConfigException('PhpMailer is required to use SMTP features');
-          }
-
-          $this->type = 'mail';
-          $this->check();
-          return;
+        if (false === $this->useFallback) {
+          throw new ConfigException('Mailchimp Transactional API is required to use Mailchimp features');
         }
-      }
 
-      if ('mail' === $this->type && false === $this->canUseNativeMailer()) {
-        $this->useFallback = false;
-        throw new ConfigException('Native mail() function is required to use Mail features');
+        $this->type = 'smtp';
+        $this->check();
+        return;
       }
-    } catch (\Throwable $e) {
-      if (false === $this->useFallback) {
-        throw $e;
+    }
+
+    if ('smtp' === $this->type) {
+      if (false === $this->smtp->valid || false === $this->canUsePhpMailer()) {
+        $this->smtp->valid = false;
+        $this->smtp->use = false;
+
+        if (false === $this->useFallback) {
+          throw new ConfigException('PhpMailer is required to use SMTP features');
+        }
+
+        $this->type = 'mail';
+        $this->check();
+        return;
       }
+    }
+
+    if ('mail' === $this->type && false === $this->canUseNativeMailer()) {
+      throw new ConfigException('Native mail() function is required to use Mail features');
     }
 
     if (false === $this->isMailerAvailable()) {

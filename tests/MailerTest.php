@@ -295,6 +295,14 @@ class MailerTest extends TestCase
             'smtp without a config -> mail' => [[], static function (Mailer $m): void {
                 $m->type = 'smtp';
             }, ['type' => 'mail', 'mailchimp' => false, 'smtp' => false]],
+            // a failed config check used to be swallowed: the transport stayed, invalid
+            'smtp with missing credentials -> mail' => [[], static function (Mailer $m): void {
+                $m->setSMTP(['host' => 'smtp.example.com']);
+            }, ['type' => 'mail', 'mailchimp' => false, 'smtp' => false]],
+            'mailchimp without an api key -> smtp' => [[], static function (Mailer $m) use ($smtp): void {
+                $m->setSMTP($smtp);
+                $m->setMailchimp(['apiKey' => '']);
+            }, ['type' => 'smtp', 'mailchimp' => false, 'smtp' => true]],
         ];
     }
 
@@ -325,6 +333,11 @@ class MailerTest extends TestCase
             'PHPMailer missing' => [['phpmailer'], static fn (Mailer $m) => $m->setSMTP($smtp), 'PhpMailer is required to use SMTP features'],
             'mail() missing' => [['mail'], static fn (Mailer $m) => null, 'Native mail() function is required to use Mail features'],
             'mail() missing, even with fallback' => [['mail'], static fn (Mailer $m) => $m->useFallback = true, 'Native mail() function is required to use Mail features'],
+            'falling back to smtp without a from' => [[], static function (Mailer $m): void {
+                $m->from = null;
+                $m->useFallback = true;
+                $m->setMailchimp(['apiKey' => '']);
+            }, 'Missing "from" Email email@domain.tld'],
             'no transport at all' => [['mailchimp', 'phpmailer', 'mail'], static fn (Mailer $m) => $m->type = 'sendmail', 'No mailer available to send the message !'],
         ];
     }
@@ -352,5 +365,19 @@ class MailerTest extends TestCase
         $this->expectExceptionMessageMatches('/^No message content nor template was set$/');
 
         $mailer->send();
+    }
+
+    /**
+     * The DKIM identity (the i= tag of the signature) is an address: it used to
+     * default to the sender's display name.
+     */
+    public function testTheDkimIdentityDefaultsToTheSendersAddress(): void
+    {
+        $mailer = $this->ready();
+        $mailer->setSMTP(['host' => 'smtp.example.net', 'user' => 'mailer', 'pass' => 'secret']);
+        $mailer->setDKIM(['private' => 'key', 'selector' => 'mail']);
+        $mailer->check();
+
+        $this->assertSame(['site@example.com', true], [$mailer->dkim->identity, $mailer->dkim->valid]);
     }
 }
