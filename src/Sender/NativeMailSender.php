@@ -36,13 +36,21 @@ class NativeMailSender
 
   public function send()
   {
+    // the mailer's subject (it used to stay 'Mail Subject'), MIME-encoded when not plain ASCII
+    if ('' !== $this->mailer->subject) {
+      $this->subject = $this->mailer->subject;
+    }
+    if (preg_match('/[^\x20-\x7E]/', $this->subject)) {
+      $this->subject = mb_encode_mimeheader($this->subject, 'UTF-8', 'B', "\r\n");
+    }
+
     $this->timestamp = $this->mailer->timestamp;
     $this->messageId = md5((string)$this->mailer->from->email . (string)time()) . '@' . $this->mailer->domain;
     $this->boundary = 'PHP-alt-' . md5(time());
     $this->xMailer = 'PHP/' . \phpversion();
 
     try {
-      if (false === mail($this->formatTo(), $this->subject, $this->formatBody(), $this->formatHeaders())) {
+      if (false === $this->deliver($this->formatTo(), $this->subject, $this->formatBody(), $this->formatHeaders())) {
         throw new Exception('Error sending mail');
       }
     } catch (\Throwable $e) {
@@ -50,6 +58,13 @@ class NativeMailSender
     }
   }
 
+  /**
+   * The one call to PHP's mail(), so a test (or a subclass) can see what is sent.
+   */
+  protected function deliver(string $to, string $subject, string $body, array $headers): bool
+  {
+    return mail($to, $subject, $body, $headers);
+  }
   protected function formatTo(): string
   {
     $to = [];
