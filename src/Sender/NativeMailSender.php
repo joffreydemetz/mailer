@@ -40,17 +40,15 @@ class NativeMailSender
     if ('' !== $this->mailer->subject) {
       $this->subject = $this->mailer->subject;
     }
-    if (preg_match('/[^\x20-\x7E]/', $this->subject)) {
-      $this->subject = mb_encode_mimeheader($this->subject, 'UTF-8', 'B', "\r\n");
-    }
 
-    $this->timestamp = $this->mailer->timestamp;
+    // Mailer::$timestamp stays empty unless the app sets it: the Date header is required
+    $this->timestamp = '' !== $this->mailer->timestamp ? $this->mailer->timestamp : date(\DATE_RFC2822);
     $this->messageId = md5((string)$this->mailer->from->email . (string)time()) . '@' . $this->mailer->domain;
     $this->boundary = 'PHP-alt-' . md5(time());
     $this->xMailer = 'PHP/' . \phpversion();
 
     try {
-      if (false === $this->deliver($this->formatTo(), $this->subject, $this->formatBody(), $this->formatHeaders())) {
+      if (false === $this->deliver($this->formatTo(), $this->encodedSubject(), $this->formatBody(), $this->formatHeaders())) {
         throw new Exception('Error sending mail');
       }
     } catch (\Throwable $e) {
@@ -65,6 +63,19 @@ class NativeMailSender
   {
     return mail($to, $subject, $body, $headers);
   }
+
+  /**
+   * The subject header: RFC 2047 encoded words when it is not plain ASCII.
+   */
+  protected function encodedSubject(): string
+  {
+    if (preg_match('/[^\x20-\x7E]/', $this->subject)) {
+      return mb_encode_mimeheader($this->subject, 'UTF-8', 'B', "\r\n");
+    }
+
+    return $this->subject;
+  }
+
   protected function formatTo(): string
   {
     $to = [];
@@ -106,9 +117,13 @@ class NativeMailSender
 
     $headers['X-Sender'] = (string)$this->mailer->from;
     $headers['X-Mailer'] = (string)$this->xMailer;
-    $headers['X-Priority'] = (string)$this->xPriority;
+    // only an important mail is flagged (it used to be every mail)
+    if (true === $this->mailer->important) {
+      $headers['X-Priority'] = (string)$this->xPriority;
+    }
     $headers['Return-Path'] = $this->mailer->from->email;
-    $headers['Content-Transfer-Encoding'] = 'quoted-printable';
+    // the body is sent as is (it is not quoted-printable), and a multipart entity may only be 7bit, 8bit or binary
+    $headers['Content-Transfer-Encoding'] = '8bit';
     $headers['MIME-Version'] = '1.0';
 
     if (count($this->mailer->attachments) > 0) {
@@ -159,7 +174,7 @@ class NativeMailSender
       $body[] = '<html>';
       $body[] = ' <head>';
       $body[] = '  <meta http-equiv="Content-Type" content="text/html; charset=' . $this->mailer->charset . '" />';
-      $body[] = '  <title>' . $this->subject . '</title>';
+      $body[] = '  <title>' . strtr($this->subject, ['&' => '&amp;', '<' => '&lt;', '>' => '&gt;']) . '</title>';
       $body[] = ' </head>';
       $body[] = ' <body>';
       $body[] = wordwrap($this->mailer->content->Body, self::WORDWRAP_MAXLENGTH_HTML, "\r\n");
@@ -181,21 +196,24 @@ class NativeMailSender
         $data = \fread($file, \filesize($attachement->path));
         \fclose($file);
         $data = \chunk_split(\base64_encode($data));
+        $name = '' !== $attachement->name ? $attachement->name : basename($attachement->path);
 
         $body[] = '';
         $body[] = '--' . $this->boundary;
-        $body[] = 'Content-Type: ' . $attachement->type . '; name="' . $attachement->name . '"';
-        $body[] = 'Content-Transfer-Encoding: ' . $attachement->encoding . '';
-        $body[] = 'Content-Disposition: ' . $attachement->disposition . '; filename="' . $attachement->name . '"';
+        $body[] = 'Content-Type: ' . $attachement->type . '; name="' . $name . '"';
+        // the data is base64 whatever encoding the attachment was declared with
+        $body[] = 'Content-Transfer-Encoding: base64';
+        $body[] = 'Content-Disposition: ' . $attachement->disposition . '; filename="' . $name . '"';
         $body[] = '';
         $body[] = $data;
         $body[] = '';
       }
     }
 
+    // the close delimiter ends the multipart body (RFC 2046)
     if (true === $withBoundaries) {
       $body[] = '';
-      $body[] = '--' . $this->boundary;
+      $body[] = '--' . $this->boundary . '--';
     }
 
     return implode("\r\n", $body);

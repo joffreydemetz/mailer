@@ -122,11 +122,9 @@ class NativeMailSenderTest extends TestCase
         $sender->setMailer($this->mailer())->send();
 
         $headers = $sender->sent['headers'];
-        // deliberately not pinned: Content-Transfer-Encoding is always "quoted-printable" while the
-        // body is never encoded (and a multipart entity may only be 7bit/8bit/binary), and
-        // X-Priority is always 1 (highest) whatever Mailer::$important says
-        unset($headers['Content-Transfer-Encoding'], $headers['X-Priority']);
 
+        // the body is sent as is: 8bit (it used to claim quoted-printable), and no
+        // X-Priority unless the mail is important (it used to be 1 on every mail)
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}@example\.com$/', $sender->messageId);
         $this->assertSame([
             'Date' => 'Sat, 10 Oct 2026 10:00:00 +0200',
@@ -135,6 +133,7 @@ class NativeMailSenderTest extends TestCase
             'X-Sender' => 'Site <site@example.com>',
             'X-Mailer' => 'PHP/' . \PHP_VERSION,
             'Return-Path' => 'site@example.com',
+            'Content-Transfer-Encoding' => '8bit',
             'MIME-Version' => '1.0',
             'Content-type' => 'text/plain; charset=utf-8',
         ], $headers);
@@ -218,9 +217,7 @@ class NativeMailSenderTest extends TestCase
         $sender->setMailer($this->mailer('Your order', ['Body' => '<p>Hello</p>', 'AltBody' => 'Hello', 'isHtml' => true]))->send();
 
         $this->assertMatchesRegularExpression('/^PHP-alt-[0-9a-f]{32}$/', $sender->boundary);
-        // the tail is not pinned: the message should end on the close delimiter "--<boundary>--"
-        // (RFC 2046) but ends on a plain "--<boundary>"
-        $this->assertStringStartsWith(implode("\r\n", [
+        $this->assertSame(implode("\r\n", [
             '--' . $sender->boundary,
             'Content-Type: text/plain; charset=utf-8',
             'Content-Transfer-Encoding: 8bit',
@@ -241,6 +238,7 @@ class NativeMailSenderTest extends TestCase
             ' </body>',
             '</html>',
             '',
+            '--' . $sender->boundary . '--',
         ]), $sender->sent['body']);
     }
 
@@ -253,8 +251,7 @@ class NativeMailSenderTest extends TestCase
         $sender = $this->sender();
         $sender->setMailer($mailer)->send();
 
-        // the tail is not pinned: see testATextAlternativeIsSentAsThePartBeforeTheHtmlOne
-        $this->assertStringStartsWith(implode("\r\n", [
+        $this->assertSame(implode("\r\n", [
             '',
             '--' . $sender->boundary,
             'Content-Type: text/plain; charset=utf-8',
@@ -270,6 +267,9 @@ class NativeMailSenderTest extends TestCase
             str_repeat('QUFB', 19),
             'QUFB',
             '',
+            '',
+            '',
+            '--' . $sender->boundary . '--',
         ]), $sender->sent['body']);
     }
 
@@ -326,5 +326,77 @@ class NativeMailSenderTest extends TestCase
         $this->assertSame('Connection refused', $e->getMessage());
         $this->assertSame(7, $e->getCode());
         $this->assertSame($error, $e->getPrevious());
+    }
+
+    public function testAnImportantMailIsSentWithTheHighestPriority(): void
+    {
+        $mailer = $this->mailer();
+        $mailer->setAsImportant();
+
+        $sender = $this->sender();
+        $sender->setMailer($mailer)->send();
+
+        $this->assertSame('1', $sender->sent['headers']['X-Priority']);
+    }
+
+    /**
+     * Mailer::$timestamp is empty unless the app sets it: the Date header used to
+     * go out empty.
+     */
+    public function testWithoutATimestampTheDateHeaderIsNow(): void
+    {
+        $mailer = $this->mailer();
+        $mailer->timestamp = '';
+
+        $before = time();
+        $sender = $this->sender();
+        $sender->setMailer($mailer)->send();
+
+        $date = \DateTimeImmutable::createFromFormat(\DATE_RFC2822, $sender->sent['headers']['Date']);
+        $this->assertNotFalse($date, 'an RFC 2822 date');
+        $this->assertGreaterThanOrEqual($before, $date->getTimestamp());
+        $this->assertLessThanOrEqual(time(), $date->getTimestamp());
+    }
+
+    /**
+     * The attachment is always base64-encoded: its part used to announce the
+     * attachment's own encoding over base64 data.
+     */
+    public function testAnAttachmentPartAnnouncesTheBase64ItCarries(): void
+    {
+        $mailer = $this->mailer();
+        $this->file = tempnam(sys_get_temp_dir(), 'jdz-mailer-');
+        file_put_contents($this->file, 'notes');
+        $mailer->addAttachment($this->file, 'notes.txt', '7bit', 'text/plain', 'attachment');
+
+        $sender = $this->sender();
+        $sender->setMailer($mailer)->send();
+
+        $this->assertStringContainsString("filename=\"notes.txt\"\r\n\r\n" . base64_encode('notes'), $sender->sent['body']);
+        $this->assertStringContainsString("name=\"notes.txt\"\r\nContent-Transfer-Encoding: base64\r\n", $sender->sent['body']);
+    }
+
+    public function testANamelessAttachmentIsNamedAfterItsFile(): void
+    {
+        $mailer = $this->mailer();
+        $this->attach($mailer, 'notes', '', 'text/plain', 'attachment');
+
+        $sender = $this->sender();
+        $sender->setMailer($mailer)->send();
+
+        $name = basename($this->file);
+        $this->assertStringContainsString('Content-Type: text/plain; name="' . $name . '"', $sender->sent['body']);
+        $this->assertStringContainsString('Content-Disposition: attachment; filename="' . $name . '"', $sender->sent['body']);
+    }
+
+    /**
+     * The <title> is HTML: it gets the subject escaped, not its RFC 2047 header form.
+     */
+    public function testTheHtmlTitleIsTheEscapedSubject(): void
+    {
+        $sender = $this->sender();
+        $sender->setMailer($this->mailer('Commande <été>', ['Body' => '<p>Hello</p>', 'isHtml' => true]))->send();
+
+        $this->assertStringContainsString('  <title>Commande &lt;été&gt;</title>', $sender->sent['body']);
     }
 }
