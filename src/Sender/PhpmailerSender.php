@@ -91,33 +91,33 @@ class PhpmailerSender extends PHPMailer
     $this->Body = $this->mailer->content->Body;
     $this->AltBody = $this->mailer->content->AltBody;
 
-    $this->setFrom($this->mailer->from->email, $this->mailer->from->name);
-
-    foreach ($this->mailer->recipients as $person) {
-      $this->addAddress($person->email, $person->name);
-    }
-
-    foreach ($this->mailer->replyTos as $person) {
-      $this->addReplyTo($person->email, $person->name);
-    }
-
-    foreach ($this->mailer->ccs as $person) {
-      $this->addCC($person->email, $person->name);
-    }
-
-    foreach ($this->mailer->bccs as $person) {
-      $this->addBCC($person->email, $person->name);
-    }
-
-    foreach ($this->mailer->attachments as $attachment) {
-      $this->addAttachment($attachment->path, $attachment->name, $attachment->encoding, $attachment->type, $attachment->disposition);
-    }
-
     $error = null;
 
     \ob_start();
 
+    // addresses and attachments throw PHPMailer errors too: logged and wrapped like the send
     try {
+      $this->setFrom($this->mailer->from->email, $this->mailer->from->name);
+
+      foreach ($this->mailer->recipients as $person) {
+        $this->addAddress($person->email, $person->name);
+      }
+
+      foreach ($this->mailer->replyTos as $person) {
+        $this->addReplyTo($person->email, $person->name);
+      }
+
+      foreach ($this->mailer->ccs as $person) {
+        $this->addCC($person->email, $person->name);
+      }
+
+      foreach ($this->mailer->bccs as $person) {
+        $this->addBCC($person->email, $person->name);
+      }
+
+      foreach ($this->mailer->attachments as $attachment) {
+        $this->addAttachment($attachment->path, $attachment->name, $attachment->encoding, $attachment->type, $attachment->disposition);
+      }
 
       if (false === parent::send()) {
         echo 'Error sending mail';

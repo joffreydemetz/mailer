@@ -302,4 +302,27 @@ class PhpmailerSenderTest extends TestCase
 
         $this->assertSame(['earlier run', '', 'PhpmailerSender error', 'CODE    : 5', 'MESSAGE : Disk full'], $mailer->DebugInfos);
     }
+
+    /**
+     * Addresses and attachments are handed to PHPMailer inside the error handling:
+     * a PHPMailer error there used to escape raw and unlogged.
+     */
+    public function testAnAttachmentErrorIsLoggedThenRethrownAsAMailerException(): void
+    {
+        $mailer = $this->mailer();
+        $this->file = tempnam(sys_get_temp_dir(), 'jdz-mailer-');
+        file_put_contents($this->file, 'notes');
+        $mailer->addAttachment($this->file, 'notes.txt');
+        $this->prepare($mailer);
+        unlink($this->file);
+
+        $sender = $this->sender();
+        $sender->setMailer($mailer);
+        $e = $this->caught(static fn () => $sender->send());
+
+        $this->assertSame(Exception::class, $e::class);
+        $this->assertInstanceOf(PHPMailerException::class, $e->getPrevious());
+        $this->assertSame(['PHPmailer error', 'CODE    : ' . $e->getCode()], array_slice($mailer->DebugInfos, 0, 2));
+        $this->assertSame(0, $sender->posts, 'nothing was posted');
+    }
 }
