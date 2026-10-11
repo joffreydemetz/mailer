@@ -78,7 +78,7 @@ try {
         'useFallback' => false,
         'domain' => '',
         'timestamp' => (new \DateTime())->format(\DATE_RFC3339),
-        'language' => 'fr', // for phpmailer
+        'language' => 'fr',
         'charset' => 'utf-8',
         'content' => [
             'isHtml' => true,

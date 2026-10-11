@@ -7,7 +7,7 @@
  *
  * @format      HTML
  * @smtp        true
- * @sender      PHPmailer
+ * @sender      symfony/mailer (smtp)
  * @altbody     Basic
  */
 
