@@ -19,21 +19,20 @@
         }
     ],
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "symfony/mailer": "^7.4"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",
         "symfony/dotenv": "^7.4",
-        "phpmailer/phpmailer": "^6.9",
         "ph-7/html-to-text": "^2.0",
         "soundasleep/html2text": "^2.0",
-        "mailchimp/transactional": "^1.0"
+        "symfony/mailchimp-mailer": "^7.4"
     },
     "suggest": {
-        "phpmailer/phpmailer": "Needed to send email using SMTP, DKIM or Sendmail features.",
+        "symfony/mailchimp-mailer": "To send through Mailchimp Transactional (Mandrill), type mailchimp.",
         "ph-7/html-to-text": "To convert the html mail body to plain text with Pierre-Henry de Soria's Html2Text converter.",
-        "soundasleep/html2text": "To convert the html mail body to plain text with Sound Asleep Html2Text converter (2.x, for its char_set option).",
-        "mailchimp/transactional": "To send email using Mailchimp Transactional API."
+        "soundasleep/html2text": "To convert the html mail body to plain text with Sound Asleep Html2Text converter (2.x, for its char_set option)."
     },
     "autoload": {
         "psr-4": {

@@ -18,6 +18,7 @@ class DkimConfig extends Config
   public bool $use = false;
 
   public string $domain = '';
+  /** kept for the config contract; symfony/mime signs as the domain (i=@domain) */
   public string $identity = '';
   public string $private = '';
   public string $selector = '';

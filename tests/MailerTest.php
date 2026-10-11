@@ -11,7 +11,7 @@ use JDZ\Mailer\Exception\ConfigException;
 class MailerTest extends TestCase
 {
     /**
-     * A mailer whose transports can be taken away: 'mailchimp', 'phpmailer', 'mail'.
+     * A mailer whose transports can be taken away: 'mailchimp', 'smtp', 'mail'.
      */
     private function mailer(string ...$unavailable): Mailer
     {
@@ -26,9 +26,9 @@ class MailerTest extends TestCase
                 return !in_array('mailchimp', $this->unavailable, true) && parent::canUseMailchimp();
             }
 
-            protected function canUsePhpMailer(): bool
+            protected function canUseSmtp(): bool
             {
-                return !in_array('phpmailer', $this->unavailable, true) && parent::canUsePhpMailer();
+                return !in_array('smtp', $this->unavailable, true) && parent::canUseSmtp();
             }
 
             protected function canUseNativeMailer(): bool
@@ -289,7 +289,7 @@ class MailerTest extends TestCase
             'mailchimp without its client, no smtp config -> mail' => [['mailchimp'], static function (Mailer $m): void {
                 $m->setMailchimp(['apiKey' => 'md-key']);
             }, ['type' => 'mail', 'mailchimp' => false, 'smtp' => false]],
-            'smtp without PHPMailer -> mail' => [['phpmailer'], static function (Mailer $m) use ($smtp): void {
+            'smtp without its transport -> mail' => [['smtp'], static function (Mailer $m) use ($smtp): void {
                 $m->setSMTP($smtp);
             }, ['type' => 'mail', 'mailchimp' => false, 'smtp' => false]],
             'smtp without a config -> mail' => [[], static function (Mailer $m): void {
@@ -329,8 +329,8 @@ class MailerTest extends TestCase
             'dkim private key missing' => [[], static fn (Mailer $m) => $m->setDKIM(['selector' => 'mail']), 'Missing DKIM "private" key'],
             'dkim selector missing' => [[], static fn (Mailer $m) => $m->setDKIM(['private' => 'key']), 'Missing DKIM "selector" key'],
             'mailchimp api key missing' => [[], static fn (Mailer $m) => $m->setMailchimp(['use' => true]), 'Missing Api Key'],
-            'mailchimp client missing' => [['mailchimp'], static fn (Mailer $m) => $m->setMailchimp(['apiKey' => 'md-key']), 'Mailchimp Transactional API is required to use Mailchimp features'],
-            'PHPMailer missing' => [['phpmailer'], static fn (Mailer $m) => $m->setSMTP($smtp), 'PhpMailer is required to use SMTP features'],
+            'mailchimp bridge missing' => [['mailchimp'], static fn (Mailer $m) => $m->setMailchimp(['apiKey' => 'md-key']), 'Mailchimp needs an API key and symfony/mailchimp-mailer'],
+            'smtp transport missing' => [['smtp'], static fn (Mailer $m) => $m->setSMTP($smtp), 'SMTP needs a complete config (host, and user + pass when auth is on)'],
             'mail() missing' => [['mail'], static fn (Mailer $m) => null, 'Native mail() function is required to use Mail features'],
             'mail() missing, even with fallback' => [['mail'], static fn (Mailer $m) => $m->useFallback = true, 'Native mail() function is required to use Mail features'],
             'falling back to smtp without a from' => [[], static function (Mailer $m): void {
@@ -338,7 +338,7 @@ class MailerTest extends TestCase
                 $m->useFallback = true;
                 $m->setMailchimp(['apiKey' => '']);
             }, 'Missing "from" Email email@domain.tld'],
-            'no transport at all' => [['mailchimp', 'phpmailer', 'mail'], static fn (Mailer $m) => $m->type = 'sendmail', 'No mailer available to send the message !'],
+            'no transport at all' => [['mailchimp', 'smtp', 'mail'], static fn (Mailer $m) => $m->type = 'sendmail', 'No mailer available to send the message !'],
         ];
     }
 

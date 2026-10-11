@@ -18,6 +18,8 @@ class MailchimpConfig extends Config
   public bool $use = false;
 
   public ?string $apiKey = null;
+  /** the Mandrill SMTP username (any string); the from address when empty */
+  public string $user = '';
   public bool $track_opens = true;
   public bool $track_clicks = true;
   public bool $auto_text = true;

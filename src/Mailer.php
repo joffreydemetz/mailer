@@ -11,21 +11,31 @@ use JDZ\Mailer\Config\ContentConfig;
 use JDZ\Mailer\Config\SmtpConfig;
 use JDZ\Mailer\Config\DkimConfig;
 use JDZ\Mailer\Config\MailchimpConfig;
-use JDZ\Mailer\Sender\NativeMailSender;
-use JDZ\Mailer\Sender\PhpmailerSender;
-use JDZ\Mailer\Sender\MailchimpSender;
+use JDZ\Mailer\Message\EmailBuilder;
+use JDZ\Mailer\Transport\DsnBuilder;
 use JDZ\Mailer\Address;
 use JDZ\Mailer\Attachment;
 use JDZ\Mailer\AltBody\BasicAltBody;
 use JDZ\Mailer\Exception\Exception;
 use JDZ\Mailer\Exception\ConfigException;
+use JDZ\Mailer\Exception\MailchimpException;
+use JDZ\Mailer\Exception\SmtpException;
+use Symfony\Component\Mailer\Bridge\Mailchimp\Transport\MandrillTransportFactory;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mailer\Transport\TransportInterface;
+use Symfony\Component\Mime\Crypto\DkimSigner;
 
 /**
- * Mail
+ * Mail — a facade over symfony/mailer: the config keys become a transport DSN
+ * (DsnBuilder), the addresses and content a Symfony Email (EmailBuilder).
  */
 class Mailer
 {
   public string $type = 'mail';
+  /** a symfony/mailer DSN set here bypasses the type / smtp / mailchimp configs */
+  public string $dsn = '';
   public string $domain = '';
   public string $timestamp = '';
   public string $language = 'fr';
@@ -360,7 +370,7 @@ class Mailer
         $this->mailchimp->use = false;
 
         if (false === $this->useFallback) {
-          throw new ConfigException('Mailchimp Transactional API is required to use Mailchimp features');
+          throw new ConfigException('Mailchimp needs an API key and symfony/mailchimp-mailer');
         }
 
         $this->type = 'smtp';
@@ -370,12 +380,12 @@ class Mailer
     }
 
     if ('smtp' === $this->type) {
-      if (false === $this->smtp->valid || false === $this->canUsePhpMailer()) {
+      if (false === $this->smtp->valid || false === $this->canUseSmtp()) {
         $this->smtp->valid = false;
         $this->smtp->use = false;
 
         if (false === $this->useFallback) {
-          throw new ConfigException('PhpMailer is required to use SMTP features');
+          throw new ConfigException('SMTP needs a complete config (host, and user + pass when auth is on)');
         }
 
         $this->type = 'mail';
@@ -393,26 +403,73 @@ class Mailer
     }
   }
 
+  /**
+   * @throws ConfigException     the config or an address
+   * @throws SmtpException       an smtp / sendmail / native transport failure
+   * @throws MailchimpException  a Mandrill failure (a rejected recipient is one)
+   * @throws Exception           anything else (an unreadable attachment...)
+   */
   public function send()
   {
     $this->check();
-    if ('mailchimp' === $this->type) {
-      $sender = new MailchimpSender();
-    } elseif ('smtp' === $this->type) {
-      $sender = new PhpmailerSender();
-    } else {
-      $sender = new NativeMailSender();
-    }
-
     $this->content->check();
 
-    $sender->setMailer($this);
-    $sender->send();
+    $email = (new EmailBuilder())->build($this);
+
+    if (true === $this->dkim->valid && 'mailchimp' !== $this->type) {
+      $email = $this->signer()->sign($email);
+    }
+
+    try {
+      $sent = $this->createTransport((new DsnBuilder())->build($this))->send($email);
+    } catch (TransportExceptionInterface $e) {
+      if ('mailchimp' === $this->type) {
+        throw new MailchimpException($e->getMessage(), (int)$e->getCode(), $e);
+      }
+
+      throw new SmtpException($e->getMessage(), (int)$e->getCode(), $e);
+    } catch (Exception $e) {
+      throw $e;
+    } catch (\Throwable $e) {
+      throw new Exception($e->getMessage(), (int)$e->getCode(), $e);
+    }
+
+    if (null !== $sent && '' !== ($debug = trim($sent->getDebug()))) {
+      if ($this->DebugInfos) {
+        $this->DebugInfos[] = '';
+      }
+
+      $this->DebugInfos = array_merge($this->DebugInfos, preg_split('/\r?\n/', $debug));
+    }
+  }
+
+  /**
+   * The transport of a DSN (symfony/mailer's factories, the Mailchimp bridge
+   * when installed). Overridden by the tests with an in-memory transport.
+   */
+  protected function createTransport(string $dsn): TransportInterface
+  {
+    return Transport::fromDsn($dsn);
+  }
+
+  protected function signer(): DkimSigner
+  {
+    try {
+      return new DkimSigner(
+        $this->dkim->private,
+        $this->dkim->domain,
+        $this->dkim->selector,
+        ['headers_to_ignore' => []],
+        $this->dkim->passphrase
+      );
+    } catch (\Throwable $e) {
+      throw new ConfigException('DKIM: ' . $e->getMessage(), 0, $e);
+    }
   }
 
   protected function isMailerAvailable()
   {
-    return true === $this->canUsePhpMailer() || true === $this->canUseNativeMailer() || true === $this->canUseMailchimp();
+    return true === $this->canUseSmtp() || true === $this->canUseNativeMailer() || true === $this->canUseMailchimp();
   }
 
   protected function checkAddress(string $email, string $name = ''): ?Address
@@ -437,14 +494,14 @@ class Mailer
     return $attachment;
   }
 
-  protected function canUsePhpMailer(): bool
+  protected function canUseSmtp(): bool
   {
-    return \class_exists('\\PHPMailer\\PHPMailer\\PHPMailer');
+    return \class_exists(EsmtpTransport::class);
   }
 
   protected function canUseMailchimp(): bool
   {
-    return \class_exists('\\MailchimpTransactional\\ApiClient');
+    return \class_exists(MandrillTransportFactory::class);
   }
 
   protected function canUseNativeMailer(): bool
